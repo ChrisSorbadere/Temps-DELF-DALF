@@ -238,31 +238,36 @@
       <span class="badge">Niveau B1</span>
     </div>
 
-    <div class="stage" id="stage">
-      <div class="phase-label" id="phaseLabel">Préparation</div>
-      <div class="time" id="display">10:00</div>
-
-      <div class="progress" id="progress">
-        <div class="track"><div class="bar" id="bar"></div></div>
-        <div class="ticks" id="ticks">
-          <span class="tick" data-at="120" style="left:16.67%">02:00</span>
-          <span class="tick" data-at="300" style="left:41.67%">05:00</span>
-          <span class="tick last" data-at="720" style="left:100%;transform:translateX(-100%)">12:00</span>
+    <div class="stack">
+      <div class="stage small" id="b1cdStage">
+        <div class="phase-label">Préparation · 10 min</div>
+        <div class="time" id="b1cdTime">10:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar" id="b1cdBar"></div></div>
         </div>
+        <div class="controls" id="b1cdControls"></div>
       </div>
 
-      <div class="controls" id="controls">
-        <!-- boutons injectés selon la phase -->
+      <div class="stage small" id="b1swStage">
+        <div class="phase-label">Passation</div>
+        <div class="time run" id="b1swTime">00:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar run" id="b1swBar" style="width:0%"></div></div>
+          <div class="ticks on">
+            <span class="tick" data-at="120" style="left:16.67%">02:00</span>
+            <span class="tick" data-at="300" style="left:41.67%">05:00</span>
+            <span class="tick last" data-at="720" style="left:100%;transform:translateX(-100%)">12:00</span>
+          </div>
+        </div>
+        <div class="controls" id="b1swControls"></div>
+        <div class="cues" id="b1cues" style="display:flex">
+          <div class="cue" data-at="120"><span class="at">02:00</span><span class="txt">Fin présentation</span></div>
+          <div class="cue" data-at="300"><span class="at">05:00</span><span class="txt">Fin jeu de rôle</span></div>
+          <div class="cue last" data-at="720"><span class="at">12:00</span><span class="txt">Fin examen</span></div>
+        </div>
+        <div class="hint">Arrêt automatique à 15 min.</div>
+        <div class="laps" id="b1swLaps"></div>
       </div>
-
-      <div class="cues" id="cues" style="display:none">
-        <div class="cue" data-at="120"><span class="at">02:00</span><span class="txt">Fin présentation</span></div>
-        <div class="cue" data-at="300"><span class="at">05:00</span><span class="txt">Fin jeu de rôle</span></div>
-        <div class="cue last" data-at="720"><span class="at">12:00</span><span class="txt">Fin examen</span></div>
-      </div>
-
-      <div class="hint" id="hint">Compte à rebours de 10 minutes avant la passation.</div>
-      <div class="laps" id="b1laps"></div>
     </div>
   </section>
 
@@ -346,10 +351,7 @@ const $ = id => document.getElementById(id);
 function show(scr){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(scr).classList.add('active'); }
 function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
 function flashEl(el){ if(!el)return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-function flash(){ flashEl($('stage')); }
 function fmt(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
-function setBar(pct,over){ const b=$('bar'); b.style.width=Math.max(0,Math.min(100,pct))+'%'; if(over!==undefined) b.classList.toggle('over',!!over); }
-function showProgress(on,withTicks){ $('progress').classList.toggle('on',on); $('ticks').classList.toggle('on',!!withTicks); }
 
 /* Garde l'écran allumé tant qu'au moins un chrono tourne */
 let wakeLock=null;
@@ -363,166 +365,31 @@ async function syncWake(){
 function markActive(id,on){ if(on)activeTimers.add(id); else activeTimers.delete(id); syncWake(); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && activeTimers.size>0) syncWake(); });
 
-/* ===== État B1 ===== */
-const COUNTDOWN = 10*60;          // 10 min de préparation
-const CUES = [120,300,720];       // jalons du chronomètre (s)
-let timer = { phase:'idle', raf:null, t0:0, base:0, paused:false, fired:new Set() };
-
-function openB1(){ resetB1(); show('b1'); }
-function goHome(){ stopLoop(); markActive('b1',false); timer.phase='idle'; if(B2){ B2.cd.stop(); B2.sw.stop(); } if(A2){ A2.cd.stop(); A2.sw.stop(); } show('home'); }
-
-function resetB1(){
-  stopLoop(); markActive('b1',false);
-  timer = { phase:'idle', raf:null, t0:0, base:0, paused:false, fired:new Set() };
-  $('phaseLabel').textContent='Préparation';
-  $('display').className='time'; $('display').textContent=fmt(COUNTDOWN);
-  $('cues').style.display='none';
-  showProgress(false,false); setBar(100,false);
-  document.querySelectorAll('.cue').forEach(c=>c.classList.remove('hit'));
-  document.querySelectorAll('#b1 .tick').forEach(t=>t.classList.remove('hit'));
-  b1laps.length=0; renderB1Laps();
-  $('hint').textContent='Compte à rebours de 10 minutes avant la passation.';
-  setControls([{label:'Démarrer la préparation',cls:'primary',fn:startCountdown}]);
+/* ===== Module B1 ===== */
+let B1=null;
+function makeB1(){
+  const cd=mkTimer({
+    mode:'down', total:10*60,
+    display:'b1cdTime', bar:'b1cdBar', controls:'b1cdControls',
+    startLabel:'Démarrer la préparation',
+    onEnd(){ buzz([400,150,400,150,600]); }
+  });
+  const sw=mkTimer({
+    mode:'up', barRef:12*60, stopAt:15*60,
+    display:'b1swTime', bar:'b1swBar', controls:'b1swControls', lapContainer:'b1swLaps',
+    startLabel:'Démarrer le chronomètre',
+    colorRule(e){ return e>=720 ? 'over' : 'run'; },
+    milestones:[
+      { at:120, fn(){ buzz([300,120,300]); } },        // fin présentation (2:00)
+      { at:300, fn(){ buzz([300,120,300]); } },        // fin jeu de rôle (5:00)
+      { at:720, fn(){ buzz([500,200,500,200,800]); } } // fin examen (12:00)
+    ],
+    onStop(){ buzz([300,120,300]); }                   // arrêt automatique (15:00)
+  });
+  return { cd, sw };
 }
-
-function setControls(btns){
-  const c=$('controls'); c.innerHTML='';
-  btns.forEach(b=>{ const el=document.createElement('button'); el.className='btn '+(b.cls||''); el.textContent=b.label; el.onclick=b.fn; if(b.disabled)el.disabled=true; c.appendChild(el); });
-}
-
-/* ----- Phase 1 : compte à rebours 10 min ----- */
-function startCountdown(){
-  timer.phase='countdown'; timer.t0=Date.now(); timer.base=COUNTDOWN; timer.paused=false;
-  markActive('b1',true);
-  $('phaseLabel').textContent='Préparation';
-  $('hint').textContent='Vibration à la fin du compte à rebours.';
-  showProgress(true,false); setBar(100,false);
-  setControls([{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
-  loop();
-}
-
-/* ----- Phase 2 : chronomètre croissant ----- */
-function startStopwatch(){
-  timer.phase='stopwatch'; timer.t0=Date.now(); timer.base=0; timer.paused=false; timer.fired=new Set();
-  markActive('b1',true);
-  $('phaseLabel').textContent='Passation';
-  $('display').className='time run'; $('display').textContent='00:00';
-  $('cues').style.display='flex';
-  showProgress(true,true); setBar(0,false);
-  document.querySelectorAll('.cue').forEach(c=>c.classList.remove('hit'));
-  document.querySelectorAll('#b1 .tick').forEach(t=>t.classList.remove('hit'));
-  $('hint').textContent='Jalons signalés par vibration.';
-  setControls([
-    {label:'Pause',cls:'ghost',fn:togglePause},
-    {label:'Mémoriser',cls:'ghost',fn:b1Lap},
-    {label:'Réinitialiser',cls:'ghost',fn:resetB1}
-  ]);
-  loop();
-}
-
-function togglePause(){
-  if(timer.phase!=='stopwatch') return;
-  if(!timer.paused){
-    timer.base = elapsed(); timer.paused=true; stopLoop(); markActive('b1',false);
-    setControls([{label:'Reprendre',cls:'go',fn:togglePause},{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
-  } else {
-    timer.t0=Date.now(); timer.paused=false; markActive('b1',true);
-    setControls([{label:'Pause',cls:'ghost',fn:togglePause},{label:'Mémoriser',cls:'ghost',fn:b1Lap},{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
-    loop();
-  }
-}
-
-function elapsed(){ return timer.base + (Date.now()-timer.t0)/1000; }
-
-/* ----- Boucle d'affichage ----- */
-function loop(){
-  const tick=()=>{
-    if(timer.phase==='countdown'){
-      const left = COUNTDOWN - (Date.now()-timer.t0)/1000;
-      if(left<=0){
-        $('display').textContent='00:00';
-        endCountdown();
-        return;
-      }
-      $('display').textContent=fmt(left);
-      setBar(left/COUNTDOWN*100);
-    } else if(timer.phase==='stopwatch'){
-      const e=elapsed();
-      if(e>=900){ stopB1(); return; }
-      $('display').textContent=fmt(e);
-      setBar(e/720*100);
-      CUES.forEach(c=>{
-        if(e>=c && !timer.fired.has(c)){ timer.fired.add(c); hitCue(c); }
-      });
-    }
-    timer.raf=requestAnimationFrame(tick);
-  };
-  stopLoop(); timer.raf=requestAnimationFrame(tick);
-}
-function stopLoop(){ if(timer.raf){ cancelAnimationFrame(timer.raf); timer.raf=null; } }
-
-function endCountdown(){
-  stopLoop(); timer.phase='idle'; markActive('b1',false);
-  buzz([400,150,400,150,600]);   // vibration de fin de prépa
-  flash();
-  setBar(0,false);
-  $('display').className='time'; $('display').textContent='00:00';
-  $('phaseLabel').textContent='Préparation terminée';
-  $('hint').textContent='Lance le chronomètre pour la passation.';
-  setControls([{label:'Démarrer le chronomètre',cls:'go',fn:startStopwatch}]);
-}
-
-function stopB1(){
-  stopLoop(); timer.phase='idle'; markActive('b1',false);
-  document.querySelectorAll('.cue').forEach(c=>c.classList.add('hit'));
-  document.querySelectorAll('.tick').forEach(t=>t.classList.add('hit'));
-  $('display').className='time over'; $('display').textContent='15:00';
-  setBar(100,true);
-  $('phaseLabel').textContent='Examen terminé';
-  $('hint').textContent='Chronomètre arrêté automatiquement à 15 min.';
-  buzz([300,120,300]); flash();
-  setControls([{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
-}
-
-function hitCue(sec){
-  const el=document.querySelector('.cue[data-at="'+sec+'"]');
-  if(el) el.classList.add('hit');
-  const tk=document.querySelector('.tick[data-at="'+sec+'"]');
-  if(tk) tk.classList.add('hit');
-  flash();
-  if(sec===720){ buzz([500,200,500,200,800]); $('display').className='time over'; setBar(100,true); }   // fin examen
-  else buzz([300,120,300]);
-}
-
-/* ----- B1 : temps mémorisés ----- */
-const b1laps=[];
-function renderB1Laps(){ $('b1laps').innerHTML = b1laps.map((t,i)=>'<div class="lap"><span>#'+(i+1)+'</span><b>'+fmt(t)+'</b></div>').join(''); }
-function b1Lap(){ if(timer.phase!=='stopwatch')return; b1laps.push(Math.max(0,elapsed())); renderB1Laps(); }
-
-/* ----- B1 : avancer/reculer au doigt sur la barre ----- */
-(function b1Scrub(){
-  const track=$('bar').parentElement; let drag=false, resume=false;
-  const fr=x=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(x-r.left)/r.width));};
-  const active=()=> timer.phase==='countdown' || timer.phase==='stopwatch';
-  function apply(p){
-    if(timer.phase==='countdown'){
-      const rem=p*COUNTDOWN; timer.t0=Date.now()-(COUNTDOWN-rem)*1000;
-      $('display').textContent=fmt(rem); setBar(rem/COUNTDOWN*100);
-    } else if(timer.phase==='stopwatch'){
-      const e=p*720; timer.base=e; timer.t0=Date.now(); timer.fired=new Set();
-      CUES.forEach(c=>{ const cu=document.querySelector('#b1 .cue[data-at="'+c+'"]'), tk=document.querySelector('#b1 .tick[data-at="'+c+'"]');
-        if(e>=c){ timer.fired.add(c); cu&&cu.classList.add('hit'); tk&&tk.classList.add('hit'); }
-        else { cu&&cu.classList.remove('hit'); tk&&tk.classList.remove('hit'); } });
-      $('display').className = e>=720?'time over':'time run'; $('display').textContent=fmt(e); setBar(e/720*100, e>=720);
-    }
-  }
-  track.addEventListener('pointerdown',e=>{ if(!active())return; drag=true;
-    resume = timer.phase==='countdown' || (timer.phase==='stopwatch' && !timer.paused);
-    stopLoop(); track.setPointerCapture(e.pointerId); apply(fr(e.clientX)); });
-  track.addEventListener('pointermove',e=>{ if(drag) apply(fr(e.clientX)); });
-  const up=()=>{ if(!drag)return; drag=false; if(resume) loop(); };
-  track.addEventListener('pointerup',up); track.addEventListener('pointercancel',up);
-})();
+function openB1(){ if(!B1)B1=makeB1(); B1.cd.reset(); B1.sw.reset(); show('b1'); }
+function goHome(){ if(B1){ B1.cd.stop(); B1.sw.stop(); } if(B2){ B2.cd.stop(); B2.sw.stop(); } if(A2){ A2.cd.stop(); A2.sw.stop(); } show('home'); }
 
 /* ===== Moteur générique (réutilisable pour B2, et A2/C1 plus tard) ===== */
 let TID=0, B2=null, A2=null;
@@ -645,7 +512,7 @@ function makeB2(){
   const sw=mkTimer({
     mode:'up', barRef:15*60,
     display:'b2swTime', bar:'b2swBar', controls:'b2swControls', lapContainer:'b2swLaps',
-    startLabel:'Démarrer le chronomètre',
+    startLabel:'Démarrer monologue et conversation',
     colorRule(e){ return e<300 ? 'red' : 'green'; },
     milestones:[{ at:900, fn(){ buzz([500,200,500,200,800]); } }]
   });
