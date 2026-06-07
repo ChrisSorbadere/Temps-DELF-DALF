@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="36%" r="78%">
+      <stop offset="0%" stop-color="#1d2836"/>
+      <stop offset="58%" stop-color="#0e1116"/>
+      <stop offset="100%" stop-color="#070a0e"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3da9fc"/>
+      <stop offset="52%" stop-color="#2dd4a7"/>
+      <stop offset="100%" stop-color="#f5a524"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- side buttons -->
+  <rect x="120" y="92" width="26" height="48" rx="12" fill="#7f8a99" transform="rotate(-38 133 116)"/>
+  <rect x="366" y="92" width="26" height="48" rx="12" fill="#7f8a99" transform="rotate(38 379 116)"/>
+  <!-- crown / start button -->
+  <rect x="236" y="42" width="40" height="34" rx="10" fill="#d3dbe5"/>
+  <rect x="246" y="24" width="20" height="22" rx="8" fill="#d3dbe5"/>
+
+  <!-- outer track -->
+  <circle cx="256" cy="300" r="150" fill="none" stroke="#222b37" stroke-width="26"/>
+  <!-- progress arc -->
+  <circle cx="256" cy="300" r="150" fill="none" stroke="url(#ring)" stroke-width="26" stroke-linecap="round"
+          stroke-dasharray="942.5" stroke-dashoffset="250" transform="rotate(-90 256 300)" filter="url(#glow)"/>
+
+  <!-- inner face -->
+  <circle cx="256" cy="300" r="112" fill="#11161d" stroke="#2a323d" stroke-width="3"/>
+  <g stroke="#3a4453" stroke-width="5" stroke-linecap="round">
+    <line x1="256" y1="206" x2="256" y2="224"/>
+    <line x1="256" y1="376" x2="256" y2="394"/>
+    <line x1="162" y1="300" x2="180" y2="300"/>
+    <line x1="332" y1="300" x2="350" y2="300"/>
+  </g>
+
+  <!-- hand -->
+  <line x1="256" y1="300" x2="324" y2="230" stroke="#3da9fc" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="256" cy="300" r="13" fill="#3da9fc"/>
+  <circle cx="256" cy="300" r="5" fill="#0e1116"/>
+</svg>

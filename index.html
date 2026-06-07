@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mesure le temps — DELF/DALF</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0e1116;
+    --panel:#171c24;
+    --panel-2:#1e242e;
+    --line:#2a323d;
+    --txt:#e8edf2;
+    --muted:#8a94a3;
+    --b1:#3da9fc;
+    --a2:#2dd4a7;
+    --b2:#f5a524;
+    --c1:#e85d75;
+    --ok:#2dd4a7;
+    --warn:#f5a524;
+    --stop:#e85d75;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{height:100%}
+  body{
+    font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    background:radial-gradient(1200px 700px at 50% -10%,#1a2230 0%,var(--bg) 60%);
+    color:var(--txt);
+    min-height:100dvh;
+    display:flex;align-items:center;justify-content:center;
+    padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));
+    overflow-x:hidden;
+  }
+  .app{width:100%;max-width:520px}
+  .screen{display:none;animation:fade .35s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  header{text-align:center;margin-bottom:28px}
+  .brand{letter-spacing:.35em;font-size:.72rem;color:var(--muted);text-transform:uppercase}
+  h1{font-size:1.55rem;font-weight:700;margin-top:6px;letter-spacing:.02em}
+  .sub{color:var(--muted);font-size:.82rem;margin-top:6px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .lvl{
+    position:relative;border:1px solid var(--line);background:var(--panel);
+    border-radius:18px;padding:22px 16px;cursor:pointer;text-align:left;
+    color:var(--txt);transition:transform .15s ease,border-color .2s ease,background .2s ease;
+    display:flex;flex-direction:column;gap:6px;min-height:104px;
+  }
+  .lvl:active{transform:scale(.97)}
+  .lvl .code{font-size:1.7rem;font-weight:700}
+  .lvl .desc{font-size:.74rem;color:var(--muted);line-height:1.3}
+  .lvl[data-lvl="B1"]{border-color:color-mix(in srgb,var(--b1) 55%,var(--line))}
+  .lvl[data-lvl="B1"] .code{color:var(--b1)}
+  .lvl[data-lvl="B1"]::after{content:"";position:absolute;inset:0;border-radius:18px;
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--b1) 30%,transparent) inset,0 8px 28px -14px var(--b1)}
+  .lvl.soon{cursor:not-allowed;opacity:.45}
+  .lvl.soon .tag{position:absolute;top:12px;right:12px;font-size:.6rem;letter-spacing:.12em;
+    color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
+  .lvl[data-lvl="A2"] .code{color:var(--a2)}
+  .lvl[data-lvl="B2"] .code{color:var(--b2)}
+  .lvl[data-lvl="C1"] .code{color:var(--c1)}
+
+  /* --- Module B1 --- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .back{background:none;border:1px solid var(--line);color:var(--txt);border-radius:12px;
+    padding:9px 14px;font-family:inherit;font-size:.8rem;cursor:pointer;display:flex;gap:8px;align-items:center}
+  .back:active{background:var(--panel)}
+  .badge{font-size:.72rem;letter-spacing:.18em;color:var(--b1);border:1px solid color-mix(in srgb,var(--b1) 40%,var(--line));
+    border-radius:999px;padding:6px 12px;text-transform:uppercase}
+
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:30px 22px 26px;
+    text-align:center;position:relative;overflow:hidden}
+  .stage.flash{animation:flash .6s ease}
+  @keyframes flash{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 4px var(--b1) inset}}
+
+  .phase-label{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+  .time{font-size:clamp(3.6rem,22vw,6rem);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  .time.run{color:var(--b1)}
+  .time.over{color:var(--stop)}
+
+  .controls{display:flex;gap:12px;justify-content:center;margin-top:26px;flex-wrap:wrap}
+  .btn{font-family:inherit;font-size:.95rem;font-weight:600;border:none;border-radius:14px;
+    padding:15px 22px;cursor:pointer;color:#08111c;transition:transform .12s ease,filter .2s ease;min-width:140px}
+  .btn:active{transform:scale(.96)}
+  .btn.primary{background:var(--b1)}
+  .btn.go{background:var(--ok);color:#04130d}
+  .btn.ghost{background:var(--panel-2);color:var(--txt);border:1px solid var(--line);min-width:auto;padding:15px 18px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .cues{margin-top:24px;display:flex;flex-direction:column;gap:10px;text-align:left}
+  .cue{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:14px;padding:12px 14px;opacity:.4;transition:opacity .3s ease,border-color .3s ease,background .3s ease}
+  .cue.hit{opacity:1;border-color:var(--b1);background:color-mix(in srgb,var(--b1) 12%,var(--panel-2))}
+  .cue .at{font-size:.78rem;color:var(--muted);min-width:46px;font-variant-numeric:tabular-nums}
+  .cue.hit .at{color:var(--b1)}
+  .cue .txt{font-size:.95rem;font-weight:600}
+  .cue.last.hit{border-color:var(--stop);background:color-mix(in srgb,var(--stop) 14%,var(--panel-2))}
+  .cue.last.hit .at{color:var(--stop)}
+
+  .hint{color:var(--muted);font-size:.74rem;margin-top:18px;text-align:center;line-height:1.4}
+
+  #splash{text-align:center;padding:10px 0}
+  .logo{width:148px;height:148px;display:block;margin:0 auto 30px}
+  .splash-title{font-size:2.1rem;font-weight:700;letter-spacing:.01em}
+  .splash-sub{margin-top:12px;color:var(--muted);letter-spacing:.34em;font-size:.85rem;text-transform:uppercase}
+  .splash-cta{margin-top:36px}
+  .splash-cta .btn{min-width:180px}
+
+  .progress{margin-top:24px;display:none}
+  .progress.on{display:block}
+  .track{position:relative;height:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .bar{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--b1);border-radius:999px;transition:width .15s linear}
+  .bar.over{background:var(--stop)}
+  .ticks{position:relative;height:18px;margin-top:7px;display:none}
+  .ticks.on{display:block}
+  .tick{position:absolute;top:0;transform:translateX(-50%);font-size:.6rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tick::before{content:"";position:absolute;top:-9px;left:50%;width:1px;height:6px;background:var(--line);transform:translateX(-50%)}
+  .tick.hit{color:var(--b1)}
+  .tick.hit::before{background:var(--b1)}
+  .tick.last.hit{color:var(--stop)}
+  .tick.last.hit::before{background:var(--stop)}
+
+  /* --- Module B2 --- */
+  .lvl[data-lvl="B2"]{border-color:color-mix(in srgb,var(--b2) 55%,var(--line))}
+  .lvl[data-lvl="B2"]::after{content:"";position:absolute;inset:0;border-radius:18px;
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--b2) 30%,transparent) inset,0 8px 28px -14px var(--b2)}
+  .badge.b2{color:var(--b2);border-color:color-mix(in srgb,var(--b2) 40%,var(--line))}
+  .stack{display:flex;flex-direction:column;gap:14px}
+  .stage.small{padding:20px 18px 18px}
+  .stage.small .time{font-size:clamp(2.5rem,15vw,3.6rem)}
+  .stage.small .phase-label{margin-bottom:10px}
+  .stage.small .controls{margin-top:18px}
+  .stage.small .progress{margin-top:16px;display:block}
+  .stage.small .hint{margin-top:12px}
+  .time.red{color:var(--stop)}
+  .time.green{color:var(--ok)}
+  .bar.red{background:var(--stop)}
+  .bar.green{background:var(--ok)}
+  .bar.b2{background:var(--b2)}
+  .btn.accent{background:var(--b2);color:#1a1205}
+  .track{touch-action:none;cursor:ew-resize}
+  .laps{margin-top:14px;display:flex;flex-direction:column;gap:6px;max-height:130px;overflow-y:auto}
+  .lap{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-variant-numeric:tabular-nums}
+  .lap b{color:var(--txt);font-weight:600}
+
+  /* --- Module A2 --- */
+  .lvl[data-lvl="A2"]{border-color:color-mix(in srgb,var(--a2) 55%,var(--line))}
+  .lvl[data-lvl="A2"]::after{content:"";position:absolute;inset:0;border-radius:18px;
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--a2) 30%,transparent) inset,0 8px 28px -14px var(--a2)}
+  .badge.a2{color:var(--a2);border-color:color-mix(in srgb,var(--a2) 40%,var(--line))}
+  .time.a2{color:var(--a2)}
+  .bar.a2{background:var(--a2)}
+  .btn.a2{background:var(--a2);color:#04130d}
+  .stage.flash.a2{animation:flasha2 .6s ease}
+  @keyframes flasha2{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 4px var(--a2) inset}}
+  .stage.a2 .cue.hit{border-color:var(--a2);background:color-mix(in srgb,var(--a2) 12%,var(--panel-2))}
+  .stage.a2 .cue.hit .at{color:var(--a2)}
+  .stage.a2 .tick.hit{color:var(--a2)}
+  .stage.a2 .tick.hit::before{background:var(--a2)}
+  .stage.a2 .cue.last.hit{border-color:var(--stop);background:color-mix(in srgb,var(--stop) 14%,var(--panel-2))}
+  .stage.a2 .cue.last.hit .at{color:var(--stop)}
+  .stage.a2 .tick.last.hit{color:var(--stop)}
+  .stage.a2 .tick.last.hit::before{background:var(--stop)}
+  .stage.flash.b2{animation:flashb2 .6s ease}
+  @keyframes flashb2{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 4px var(--b2) inset}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ACCUEIL / SPLASH -->
+  <section id="splash" class="screen active">
+    <svg class="logo" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="lr" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3da9fc"/><stop offset="52%" stop-color="#2dd4a7"/><stop offset="100%" stop-color="#f5a524"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(0 14)">
+        <rect x="72" y="20" width="24" height="30" rx="9" fill="#7f8a99" transform="rotate(-38 84 35)"/>
+        <rect x="224" y="20" width="24" height="30" rx="9" fill="#7f8a99" transform="rotate(38 236 35)"/>
+        <rect x="146" y="2" width="28" height="24" rx="8" fill="#d3dbe5"/>
+        <circle cx="160" cy="178" r="100" fill="none" stroke="#222b37" stroke-width="18"/>
+        <circle cx="160" cy="178" r="100" fill="none" stroke="url(#lr)" stroke-width="18" stroke-linecap="round"
+                stroke-dasharray="628" stroke-dashoffset="168" transform="rotate(-90 160 178)"/>
+        <circle cx="160" cy="178" r="74" fill="#11161d" stroke="#2a323d" stroke-width="2"/>
+        <line x1="160" y1="178" x2="205" y2="132" stroke="#3da9fc" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="160" cy="178" r="9" fill="#3da9fc"/><circle cx="160" cy="178" r="3.5" fill="#0e1116"/>
+      </g>
+    </svg>
+    <div class="splash-title">Mesure le temps</div>
+    <div class="splash-sub">DELF / DALF</div>
+    <div class="splash-cta"><button class="btn primary" onclick="show('home')">Commencer</button></div>
+  </section>
+
+  <!-- SÉLECTION DU NIVEAU -->
+  <section id="home" class="screen">
+    <header>
+      <div class="brand">DELF · Production orale</div>
+      <h1>Chrono Examen</h1>
+      <div class="sub">Choisis le niveau</div>
+    </header>
+    <div class="grid">
+      <button class="lvl" data-lvl="B1" onclick="openB1()">
+        <span class="code">B1</span>
+        <span class="desc">Prépa 10 min, puis passation chronométrée</span>
+      </button>
+      <button class="lvl" data-lvl="A2" onclick="openA2()">
+        <span class="code">A2</span>
+        <span class="desc">Prépa 10 min + chrono 8 min (3 parties)</span>
+      </button>
+      <button class="lvl" data-lvl="B2" onclick="openB2()">
+        <span class="code">B2</span>
+        <span class="desc">Prépa 30 min + chrono (rouge/vert)</span>
+      </button>
+      <button class="lvl soon" data-lvl="C1" disabled>
+        <span class="tag">Bientôt</span>
+        <span class="code">C1</span>
+        <span class="desc">À configurer</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- MODULE B1 -->
+  <section id="b1" class="screen">
+    <div class="topbar">
+      <button class="back" onclick="goHome()">‹ Accueil</button>
+      <span class="badge">Niveau B1</span>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="phase-label" id="phaseLabel">Préparation</div>
+      <div class="time" id="display">10:00</div>
+
+      <div class="progress" id="progress">
+        <div class="track"><div class="bar" id="bar"></div></div>
+        <div class="ticks" id="ticks">
+          <span class="tick" data-at="120" style="left:16.67%">02:00</span>
+          <span class="tick" data-at="300" style="left:41.67%">05:00</span>
+          <span class="tick last" data-at="720" style="left:100%;transform:translateX(-100%)">12:00</span>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <!-- boutons injectés selon la phase -->
+      </div>
+
+      <div class="cues" id="cues" style="display:none">
+        <div class="cue" data-at="120"><span class="at">02:00</span><span class="txt">Fin présentation</span></div>
+        <div class="cue" data-at="300"><span class="at">05:00</span><span class="txt">Fin jeu de rôle</span></div>
+        <div class="cue last" data-at="720"><span class="at">12:00</span><span class="txt">Fin examen</span></div>
+      </div>
+
+      <div class="hint" id="hint">Compte à rebours de 10 minutes avant la passation.</div>
+      <div class="laps" id="b1laps"></div>
+    </div>
+  </section>
+
+  <!-- MODULE B2 -->
+  <section id="b2" class="screen">
+    <div class="topbar">
+      <button class="back" onclick="goHome()">‹ Accueil</button>
+      <span class="badge b2">Niveau B2</span>
+    </div>
+
+    <div class="stack">
+      <div class="stage small b2" id="b2cdStage">
+        <div class="phase-label">Préparation · 30 min</div>
+        <div class="time" id="b2cdTime">30:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar b2" id="b2cdBar"></div></div>
+        </div>
+        <div class="controls" id="b2cdControls"></div>
+      </div>
+
+      <div class="stage small b2" id="b2swStage">
+        <div class="phase-label">Passation</div>
+        <div class="time red" id="b2swTime">00:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar red" id="b2swBar" style="width:0%"></div></div>
+          <div class="ticks on"><span class="tick last" data-at="900" style="left:100%;transform:translateX(-100%)">15:00</span></div>
+        </div>
+        <div class="controls" id="b2swControls"></div>
+        <div class="hint">Rouge avant 5 min, vert ensuite · vibration à 15 min</div>
+        <div class="laps" id="b2swLaps"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE A2 -->
+  <section id="a2" class="screen">
+    <div class="topbar">
+      <button class="back" onclick="goHome()">‹ Accueil</button>
+      <span class="badge a2">Niveau A2</span>
+    </div>
+
+    <div class="stack">
+      <div class="stage small a2" id="a2cdStage">
+        <div class="phase-label">Préparation · 10 min</div>
+        <div class="time" id="a2cdTime">10:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar a2" id="a2cdBar"></div></div>
+        </div>
+        <div class="controls" id="a2cdControls"></div>
+      </div>
+
+      <div class="stage small a2" id="a2swStage">
+        <div class="phase-label">Passation · 8 min</div>
+        <div class="time a2" id="a2swTime">00:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar a2" id="a2swBar" style="width:0%"></div></div>
+          <div class="ticks on">
+            <span class="tick" data-at="90" style="left:18.75%">1:30</span>
+            <span class="tick" data-at="210" style="left:43.75%">3:30</span>
+            <span class="tick" data-at="390" style="left:81.25%">6:30</span>
+            <span class="tick last" data-at="480" style="left:100%;transform:translateX(-100%)">8:00</span>
+          </div>
+        </div>
+        <div class="controls" id="a2swControls"></div>
+        <div class="cues" id="a2cues" style="display:flex">
+          <div class="cue" data-at="90"><span class="at">1:30</span><span class="txt">Fin présentation</span></div>
+          <div class="cue" data-at="210"><span class="at">3:30</span><span class="txt">Fin monologue</span></div>
+          <div class="cue" data-at="390"><span class="at">6:30</span><span class="txt">Fin dialogue</span></div>
+          <div class="cue last" data-at="480"><span class="at">8:00</span><span class="txt">Fin épreuve</span></div>
+        </div>
+        <div class="laps" id="a2swLaps"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ===== Outils ===== */
+const $ = id => document.getElementById(id);
+function show(scr){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(scr).classList.add('active'); }
+function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
+function flashEl(el){ if(!el)return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+function flash(){ flashEl($('stage')); }
+function fmt(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+function setBar(pct,over){ const b=$('bar'); b.style.width=Math.max(0,Math.min(100,pct))+'%'; if(over!==undefined) b.classList.toggle('over',!!over); }
+function showProgress(on,withTicks){ $('progress').classList.toggle('on',on); $('ticks').classList.toggle('on',!!withTicks); }
+
+/* Garde l'écran allumé tant qu'au moins un chrono tourne */
+let wakeLock=null;
+const activeTimers=new Set();
+async function syncWake(){
+  try{
+    if(activeTimers.size>0){ if('wakeLock' in navigator && !wakeLock) wakeLock=await navigator.wakeLock.request('screen'); }
+    else { if(wakeLock){ await wakeLock.release(); wakeLock=null; } }
+  }catch(e){}
+}
+function markActive(id,on){ if(on)activeTimers.add(id); else activeTimers.delete(id); syncWake(); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && activeTimers.size>0) syncWake(); });
+
+/* ===== État B1 ===== */
+const COUNTDOWN = 10*60;          // 10 min de préparation
+const CUES = [120,300,720];       // jalons du chronomètre (s)
+let timer = { phase:'idle', raf:null, t0:0, base:0, paused:false, fired:new Set() };
+
+function openB1(){ resetB1(); show('b1'); }
+function goHome(){ stopLoop(); markActive('b1',false); timer.phase='idle'; if(B2){ B2.cd.stop(); B2.sw.stop(); } if(A2){ A2.cd.stop(); A2.sw.stop(); } show('home'); }
+
+function resetB1(){
+  stopLoop(); markActive('b1',false);
+  timer = { phase:'idle', raf:null, t0:0, base:0, paused:false, fired:new Set() };
+  $('phaseLabel').textContent='Préparation';
+  $('display').className='time'; $('display').textContent=fmt(COUNTDOWN);
+  $('cues').style.display='none';
+  showProgress(false,false); setBar(100,false);
+  document.querySelectorAll('.cue').forEach(c=>c.classList.remove('hit'));
+  document.querySelectorAll('#b1 .tick').forEach(t=>t.classList.remove('hit'));
+  b1laps.length=0; renderB1Laps();
+  $('hint').textContent='Compte à rebours de 10 minutes avant la passation.';
+  setControls([{label:'Démarrer la préparation',cls:'primary',fn:startCountdown}]);
+}
+
+function setControls(btns){
+  const c=$('controls'); c.innerHTML='';
+  btns.forEach(b=>{ const el=document.createElement('button'); el.className='btn '+(b.cls||''); el.textContent=b.label; el.onclick=b.fn; if(b.disabled)el.disabled=true; c.appendChild(el); });
+}
+
+/* ----- Phase 1 : compte à rebours 10 min ----- */
+function startCountdown(){
+  timer.phase='countdown'; timer.t0=Date.now(); timer.base=COUNTDOWN; timer.paused=false;
+  markActive('b1',true);
+  $('phaseLabel').textContent='Préparation';
+  $('hint').textContent='Vibration à la fin du compte à rebours.';
+  showProgress(true,false); setBar(100,false);
+  setControls([{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
+  loop();
+}
+
+/* ----- Phase 2 : chronomètre croissant ----- */
+function startStopwatch(){
+  timer.phase='stopwatch'; timer.t0=Date.now(); timer.base=0; timer.paused=false; timer.fired=new Set();
+  markActive('b1',true);
+  $('phaseLabel').textContent='Passation';
+  $('display').className='time run'; $('display').textContent='00:00';
+  $('cues').style.display='flex';
+  showProgress(true,true); setBar(0,false);
+  document.querySelectorAll('.cue').forEach(c=>c.classList.remove('hit'));
+  document.querySelectorAll('#b1 .tick').forEach(t=>t.classList.remove('hit'));
+  $('hint').textContent='Jalons signalés par vibration.';
+  setControls([
+    {label:'Pause',cls:'ghost',fn:togglePause},
+    {label:'Mémoriser',cls:'ghost',fn:b1Lap},
+    {label:'Réinitialiser',cls:'ghost',fn:resetB1}
+  ]);
+  loop();
+}
+
+function togglePause(){
+  if(timer.phase!=='stopwatch') return;
+  if(!timer.paused){
+    timer.base = elapsed(); timer.paused=true; stopLoop(); markActive('b1',false);
+    setControls([{label:'Reprendre',cls:'go',fn:togglePause},{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
+  } else {
+    timer.t0=Date.now(); timer.paused=false; markActive('b1',true);
+    setControls([{label:'Pause',cls:'ghost',fn:togglePause},{label:'Mémoriser',cls:'ghost',fn:b1Lap},{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
+    loop();
+  }
+}
+
+function elapsed(){ return timer.base + (Date.now()-timer.t0)/1000; }
+
+/* ----- Boucle d'affichage ----- */
+function loop(){
+  const tick=()=>{
+    if(timer.phase==='countdown'){
+      const left = COUNTDOWN - (Date.now()-timer.t0)/1000;
+      if(left<=0){
+        $('display').textContent='00:00';
+        endCountdown();
+        return;
+      }
+      $('display').textContent=fmt(left);
+      setBar(left/COUNTDOWN*100);
+    } else if(timer.phase==='stopwatch'){
+      const e=elapsed();
+      if(e>=900){ stopB1(); return; }
+      $('display').textContent=fmt(e);
+      setBar(e/720*100);
+      CUES.forEach(c=>{
+        if(e>=c && !timer.fired.has(c)){ timer.fired.add(c); hitCue(c); }
+      });
+    }
+    timer.raf=requestAnimationFrame(tick);
+  };
+  stopLoop(); timer.raf=requestAnimationFrame(tick);
+}
+function stopLoop(){ if(timer.raf){ cancelAnimationFrame(timer.raf); timer.raf=null; } }
+
+function endCountdown(){
+  stopLoop(); timer.phase='idle'; markActive('b1',false);
+  buzz([400,150,400,150,600]);   // vibration de fin de prépa
+  flash();
+  setBar(0,false);
+  $('display').className='time'; $('display').textContent='00:00';
+  $('phaseLabel').textContent='Préparation terminée';
+  $('hint').textContent='Lance le chronomètre pour la passation.';
+  setControls([{label:'Démarrer le chronomètre',cls:'go',fn:startStopwatch}]);
+}
+
+function stopB1(){
+  stopLoop(); timer.phase='idle'; markActive('b1',false);
+  document.querySelectorAll('.cue').forEach(c=>c.classList.add('hit'));
+  document.querySelectorAll('.tick').forEach(t=>t.classList.add('hit'));
+  $('display').className='time over'; $('display').textContent='15:00';
+  setBar(100,true);
+  $('phaseLabel').textContent='Examen terminé';
+  $('hint').textContent='Chronomètre arrêté automatiquement à 15 min.';
+  buzz([300,120,300]); flash();
+  setControls([{label:'Réinitialiser',cls:'ghost',fn:resetB1}]);
+}
+
+function hitCue(sec){
+  const el=document.querySelector('.cue[data-at="'+sec+'"]');
+  if(el) el.classList.add('hit');
+  const tk=document.querySelector('.tick[data-at="'+sec+'"]');
+  if(tk) tk.classList.add('hit');
+  flash();
+  if(sec===720){ buzz([500,200,500,200,800]); $('display').className='time over'; setBar(100,true); }   // fin examen
+  else buzz([300,120,300]);
+}
+
+/* ----- B1 : temps mémorisés ----- */
+const b1laps=[];
+function renderB1Laps(){ $('b1laps').innerHTML = b1laps.map((t,i)=>'<div class="lap"><span>#'+(i+1)+'</span><b>'+fmt(t)+'</b></div>').join(''); }
+function b1Lap(){ if(timer.phase!=='stopwatch')return; b1laps.push(Math.max(0,elapsed())); renderB1Laps(); }
+
+/* ----- B1 : avancer/reculer au doigt sur la barre ----- */
+(function b1Scrub(){
+  const track=$('bar').parentElement; let drag=false, resume=false;
+  const fr=x=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(x-r.left)/r.width));};
+  const active=()=> timer.phase==='countdown' || timer.phase==='stopwatch';
+  function apply(p){
+    if(timer.phase==='countdown'){
+      const rem=p*COUNTDOWN; timer.t0=Date.now()-(COUNTDOWN-rem)*1000;
+      $('display').textContent=fmt(rem); setBar(rem/COUNTDOWN*100);
+    } else if(timer.phase==='stopwatch'){
+      const e=p*720; timer.base=e; timer.t0=Date.now(); timer.fired=new Set();
+      CUES.forEach(c=>{ const cu=document.querySelector('#b1 .cue[data-at="'+c+'"]'), tk=document.querySelector('#b1 .tick[data-at="'+c+'"]');
+        if(e>=c){ timer.fired.add(c); cu&&cu.classList.add('hit'); tk&&tk.classList.add('hit'); }
+        else { cu&&cu.classList.remove('hit'); tk&&tk.classList.remove('hit'); } });
+      $('display').className = e>=720?'time over':'time run'; $('display').textContent=fmt(e); setBar(e/720*100, e>=720);
+    }
+  }
+  track.addEventListener('pointerdown',e=>{ if(!active())return; drag=true;
+    resume = timer.phase==='countdown' || (timer.phase==='stopwatch' && !timer.paused);
+    stopLoop(); track.setPointerCapture(e.pointerId); apply(fr(e.clientX)); });
+  track.addEventListener('pointermove',e=>{ if(drag) apply(fr(e.clientX)); });
+  const up=()=>{ if(!drag)return; drag=false; if(resume) loop(); };
+  track.addEventListener('pointerup',up); track.addEventListener('pointercancel',up);
+})();
+
+/* ===== Moteur générique (réutilisable pour B2, et A2/C1 plus tard) ===== */
+let TID=0, B2=null, A2=null;
+function mkTimer(cfg){
+  const id='t'+(++TID);
+  const display=$(cfg.display), bar=$(cfg.bar), controls=$(cfg.controls);
+  const stage=display.closest('.stage');
+  const mode=cfg.mode, total=cfg.total||0, barRef=cfg.barRef||total||1;
+  let raf=null, t0=0, base=(mode==='down'?total:0), paused=false, done=false, started=false;
+  const fired=new Set();
+  const laps=[];
+
+  const W=p=>{ bar.style.width=Math.max(0,Math.min(100,p))+'%'; };
+  const setColor=cls=>{ display.className='time'+(cls?' '+cls:''); bar.className='bar'+(cls?' '+cls:''); };
+  const cancel=()=>{ if(raf){cancelAnimationFrame(raf);raf=null;} };
+
+  function controlsRender(state){
+    controls.innerHTML='';
+    const add=(label,cls,fn)=>{const b=document.createElement('button');b.className='btn '+cls;b.textContent=label;b.onclick=fn;controls.appendChild(b);};
+    if(state==='idle') add(cfg.startLabel, cfg.startCls||(mode==='down'?'primary':'go'), start);
+    else if(state==='running'){ add('Pause','ghost',pauseToggle); if(cfg.lapContainer) add('Mémoriser','ghost',lap); add('Réinitialiser','ghost',reset); }
+    else if(state==='paused'){ add('Reprendre','go',pauseToggle); add('Réinitialiser','ghost',reset); }
+    else if(state==='done') add('Réinitialiser','ghost',reset);
+  }
+
+  function reset(){
+    cancel(); markActive(id,false);
+    base=(mode==='down'?total:0); paused=false; done=false; started=false; fired.clear();
+    laps.length=0; renderLaps();
+    stage.querySelectorAll('[data-at]').forEach(t=>t.classList.remove('hit'));
+    if(mode==='down'){ display.textContent=fmt(total); display.className='time'; bar.className='bar'+(cfg.barColor?' '+cfg.barColor:''); W(100); }
+    else { display.textContent=fmt(0); setColor(cfg.colorRule?cfg.colorRule(0):''); W(0); }
+    controlsRender('idle');
+  }
+
+  function start(){
+    if(done) return;
+    t0=Date.now(); paused=false; started=true; markActive(id,true);
+    controlsRender('running'); loop();
+  }
+
+  function pauseToggle(){
+    if(!started||done) return;
+    if(!paused){
+      base = (mode==='down') ? base-(Date.now()-t0)/1000 : base+(Date.now()-t0)/1000;
+      paused=true; cancel(); markActive(id,false); controlsRender('paused');
+    } else {
+      t0=Date.now(); paused=false; markActive(id,true); controlsRender('running'); loop();
+    }
+  }
+
+  function loop(){
+    cancel();
+    const step=()=>{
+      if(mode==='down'){
+        const left=base-(Date.now()-t0)/1000;
+        if(left<=0){ done=true; cancel(); markActive(id,false); display.textContent=fmt(0); W(0); controlsRender('done'); flashEl(stage); if(cfg.onEnd)cfg.onEnd(); return; }
+        display.textContent=fmt(left); W(left/total*100);
+      } else {
+        const e=base+(Date.now()-t0)/1000;
+        if(cfg.stopAt && e>=cfg.stopAt){ done=true; cancel(); markActive(id,false); display.textContent=fmt(cfg.stopAt); display.className='time over'; bar.className='bar over'; W(100); stage.querySelectorAll('[data-at]').forEach(x=>x.classList.add('hit')); controlsRender('done'); flashEl(stage); if(cfg.onStop)cfg.onStop(); return; }
+        display.textContent=fmt(e); W(e/barRef*100);
+        if(cfg.colorRule) setColor(cfg.colorRule(e));
+        (cfg.milestones||[]).forEach(m=>{ if(e>=m.at && !fired.has(m.at)){ fired.add(m.at); m.fn(); flashEl(stage); stage.querySelectorAll('[data-at="'+m.at+'"]').forEach(x=>x.classList.add('hit')); } });
+      }
+      raf=requestAnimationFrame(step);
+    };
+    raf=requestAnimationFrame(step);
+  }
+
+  function stop(){ cancel(); markActive(id,false); }
+
+  function lap(){
+    if(!cfg.lapContainer) return;
+    const v = (mode==='down') ? base-(Date.now()-t0)/1000 : base+(Date.now()-t0)/1000;
+    laps.push(Math.max(0,v)); renderLaps();
+  }
+  function renderLaps(){
+    const el=$(cfg.lapContainer); if(!el)return;
+    el.innerHTML = laps.map((t,i)=>'<div class="lap"><span>#'+(i+1)+'</span><b>'+fmt(t)+'</b></div>').join('');
+  }
+
+  /* avancer/reculer au doigt */
+  (function(){
+    const track=bar.parentElement; let drag=false, resume=false;
+    const fr=x=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(x-r.left)/r.width));};
+    function apply(p){
+      const v = (mode==='down') ? p*total : p*barRef;
+      base=v; display.textContent=fmt(v); W((mode==='down'?v/total:v/barRef)*100);
+      if(mode==='up'){
+        if(cfg.colorRule) setColor(cfg.colorRule(v));
+        fired.clear();
+        stage.querySelectorAll('[data-at]').forEach(x=>{ const at=+x.dataset.at; if(v>=at){ x.classList.add('hit'); fired.add(at); } else x.classList.remove('hit'); });
+      }
+    }
+    track.addEventListener('pointerdown',e=>{ drag=true; resume = started && !paused && !done;
+      cancel(); started=true; track.setPointerCapture(e.pointerId); apply(fr(e.clientX)); });
+    track.addEventListener('pointermove',e=>{ if(drag) apply(fr(e.clientX)); });
+    function up(){ if(!drag)return; drag=false;
+      if(mode==='down' && base<=0){ base=0; done=true; markActive(id,false); display.textContent=fmt(0); W(0); controlsRender('done'); if(cfg.onEnd)cfg.onEnd(); return; }
+      if(mode==='down') done=false;
+      if(resume){ paused=false; t0=Date.now(); markActive(id,true); controlsRender('running'); loop(); }
+      else { paused=true; markActive(id,false); controlsRender('paused'); }
+    }
+    track.addEventListener('pointerup',up); track.addEventListener('pointercancel',up);
+  })();
+
+  reset();
+  return { reset, start, pauseToggle, stop };
+}
+
+/* ===== Module B2 ===== */
+function makeB2(){
+  const cd=mkTimer({
+    mode:'down', total:30*60,
+    display:'b2cdTime', bar:'b2cdBar', controls:'b2cdControls',
+    barColor:'b2', startCls:'accent', startLabel:'Démarrer la préparation',
+    onEnd(){ buzz([400,150,400,150,600]); }
+  });
+  const sw=mkTimer({
+    mode:'up', barRef:15*60,
+    display:'b2swTime', bar:'b2swBar', controls:'b2swControls', lapContainer:'b2swLaps',
+    startLabel:'Démarrer le chronomètre',
+    colorRule(e){ return e<300 ? 'red' : 'green'; },
+    milestones:[{ at:900, fn(){ buzz([500,200,500,200,800]); } }]
+  });
+  return { cd, sw };
+}
+function openB2(){ if(!B2)B2=makeB2(); B2.cd.reset(); B2.sw.reset(); show('b2'); }
+
+/* ===== Module A2 ===== */
+function makeA2(){
+  const cd=mkTimer({
+    mode:'down', total:10*60,
+    display:'a2cdTime', bar:'a2cdBar', controls:'a2cdControls',
+    barColor:'a2', startCls:'a2', startLabel:'Démarrer la préparation',
+    onEnd(){ buzz([400,150,400,150,600]); }
+  });
+  const sw=mkTimer({
+    mode:'up', barRef:8*60, stopAt:8*60,
+    display:'a2swTime', bar:'a2swBar', controls:'a2swControls', lapContainer:'a2swLaps',
+    startCls:'a2', startLabel:'Démarrer le chronomètre',
+    colorRule(e){ return e>=480 ? 'over' : 'a2'; },
+    milestones:[
+      { at:90,  fn(){ buzz([300,120,300]); } },   // fin présentation (1:30)
+      { at:210, fn(){ buzz([300,120,300]); } },   // fin monologue (3:30)
+      { at:390, fn(){ buzz([400,150,400]); } }    // fin dialogue (6:30)
+    ],
+    onStop(){ buzz([500,200,500,200,800]); }      // fin épreuve (8:00)
+  });
+  return { cd, sw };
+}
+function openA2(){ if(!A2)A2=makeA2(); A2.cd.reset(); A2.sw.reset(); show('a2'); }
+
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
