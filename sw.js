@@ -1,4 +1,4 @@
-const CACHE = 'mesure-le-temps-v1';
+const CACHE = 'mesure-le-temps-v2';
 const ASSETS = [
   './', 'index.html', 'manifest.json',
   'icon.svg', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'favicon-32.png'
@@ -21,14 +21,28 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(cached =>
-      cached || fetch(e.request).then(resp => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const isHTML = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html');
+
+  if (isHTML) {
+    // Réseau d'abord : toujours la dernière version quand on est en ligne
+    e.respondWith(
+      fetch(req).then(resp => {
         const copy = resp.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        caches.open(CACHE).then(c => c.put('index.html', copy)).catch(() => {});
         return resp;
-      }).catch(() => caches.match('index.html'))
-    )
-  );
+      }).catch(() => caches.match(req).then(r => r || caches.match('index.html')))
+    );
+  } else {
+    // Cache d'abord pour les ressources statiques (icônes, manifest)
+    e.respondWith(
+      caches.match(req).then(cached => cached || fetch(req).then(resp => {
+        const copy = resp.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        return resp;
+      }))
+    );
+  }
 });
