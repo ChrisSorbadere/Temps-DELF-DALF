@@ -100,12 +100,13 @@
   .cues{margin-top:24px;display:flex;flex-direction:column;gap:10px;text-align:left}
   .cue{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);
     border-radius:14px;padding:12px 14px;opacity:.4;transition:opacity .3s ease,border-color .3s ease,background .3s ease}
-  .cue.hit{opacity:1;border-color:var(--b1);background:color-mix(in srgb,var(--b1) 12%,var(--panel-2))}
+  .cue.hit{opacity:1;border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel-2))}
   .cue .at{font-size:.78rem;color:var(--muted);min-width:46px;font-variant-numeric:tabular-nums}
-  .cue.hit .at{color:var(--b1)}
+  .cue.hit .at{color:var(--accent)}
   .cue .txt{font-size:.95rem;font-weight:600}
-  .cue.last.hit{border-color:var(--stop);background:color-mix(in srgb,var(--stop) 14%,var(--panel-2))}
-  .cue.last.hit .at{color:var(--stop)}
+  .cue.active{opacity:1;border-color:var(--accent);animation:pulse 1.1s ease-in-out infinite}
+  .cue.active .at{color:var(--accent)}
+  @keyframes pulse{0%,100%{background:var(--panel-2);box-shadow:0 0 0 0 transparent}50%{background:color-mix(in srgb,var(--accent) 26%,var(--panel-2));box-shadow:0 0 16px -3px var(--accent)}}
 
   .hint{color:var(--muted);font-size:.74rem;margin-top:18px;text-align:center;line-height:1.4}
 
@@ -125,10 +126,10 @@
   .ticks.on{display:block}
   .tick{position:absolute;top:0;transform:translateX(-50%);font-size:.6rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
   .tick::before{content:"";position:absolute;top:-9px;left:50%;width:1px;height:6px;background:var(--line);transform:translateX(-50%)}
-  .tick.hit{color:var(--b1)}
-  .tick.hit::before{background:var(--b1)}
-  .tick.last.hit{color:var(--stop)}
-  .tick.last.hit::before{background:var(--stop)}
+  .tick.hit{color:var(--accent)}
+  .tick.hit::before{background:var(--accent)}
+  .tick.active{color:var(--accent)}
+  .tick.active::before{background:var(--accent)}
 
   /* --- Module B2 --- */
   .lvl[data-lvl="B2"]{border-color:color-mix(in srgb,var(--b2) 55%,var(--line))}
@@ -136,7 +137,10 @@
     box-shadow:0 0 0 1px color-mix(in srgb,var(--b2) 30%,transparent) inset,0 8px 28px -14px var(--b2)}
   .badge.b2{color:var(--b2);border-color:color-mix(in srgb,var(--b2) 40%,var(--line))}
   .stack{display:flex;flex-direction:column;gap:14px}
-  .stage.small{padding:20px 18px 18px}
+  .stage.small{padding:20px 18px 18px;--accent:var(--b1)}
+  .stage.small.a2{--accent:var(--a2)}
+  .stage.small.b2{--accent:var(--b2)}
+  .stage.small.c1{--accent:var(--c1)}
   .stage.small .time{font-size:clamp(2.5rem,15vw,3.6rem)}
   .stage.small .phase-label{margin-bottom:10px}
   .stage.small .controls{margin-top:18px}
@@ -163,14 +167,17 @@
   .btn.a2{background:var(--a2);color:#04130d}
   .stage.flash.a2{animation:flasha2 .6s ease}
   @keyframes flasha2{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 4px var(--a2) inset}}
-  .stage.a2 .cue.hit{border-color:var(--a2);background:color-mix(in srgb,var(--a2) 12%,var(--panel-2))}
-  .stage.a2 .cue.hit .at{color:var(--a2)}
-  .stage.a2 .tick.hit{color:var(--a2)}
-  .stage.a2 .tick.hit::before{background:var(--a2)}
-  .stage.a2 .cue.last.hit{border-color:var(--stop);background:color-mix(in srgb,var(--stop) 14%,var(--panel-2))}
-  .stage.a2 .cue.last.hit .at{color:var(--stop)}
-  .stage.a2 .tick.last.hit{color:var(--stop)}
-  .stage.a2 .tick.last.hit::before{background:var(--stop)}
+
+  /* --- Module C1 --- */
+  .lvl[data-lvl="C1"]{border-color:color-mix(in srgb,var(--c1) 55%,var(--line))}
+  .lvl[data-lvl="C1"]::after{content:"";position:absolute;inset:0;border-radius:18px;
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--c1) 30%,transparent) inset,0 8px 28px -14px var(--c1)}
+  .badge.c1{color:var(--c1);border-color:color-mix(in srgb,var(--c1) 40%,var(--line))}
+  .time.c1{color:var(--c1)}
+  .bar.c1{background:var(--c1)}
+  .btn.c1{background:var(--c1);color:#1c0810}
+  .stage.flash.c1{animation:flashc1 .6s ease}
+  @keyframes flashc1{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 4px var(--c1) inset}}
   .stage.flash.b2{animation:flashb2 .6s ease}
   @keyframes flashb2{0%,100%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 4px var(--b2) inset}}
 </style>
@@ -223,10 +230,9 @@
         <span class="code">B2</span>
         <span class="desc">Prépa 30 min + chrono (rouge/vert)</span>
       </button>
-      <button class="lvl soon" data-lvl="C1" disabled>
-        <span class="tag">Bientôt</span>
+      <button class="lvl" data-lvl="C1" onclick="openC1()">
         <span class="code">C1</span>
-        <span class="desc">À configurer</span>
+        <span class="desc">Prépa 1 h + monologue 15 min + questions 15 min</span>
       </button>
     </div>
   </section>
@@ -261,9 +267,9 @@
         </div>
         <div class="controls" id="b1swControls"></div>
         <div class="cues" id="b1cues" style="display:flex">
-          <div class="cue" data-at="120"><span class="at">02:00</span><span class="txt">Fin présentation</span></div>
-          <div class="cue" data-at="300"><span class="at">05:00</span><span class="txt">Fin jeu de rôle</span></div>
-          <div class="cue last" data-at="720"><span class="at">12:00</span><span class="txt">Fin examen</span></div>
+          <div class="cue" data-at="120"><span class="at">02:00</span><span class="txt">Entretien</span></div>
+          <div class="cue" data-at="300"><span class="at">05:00</span><span class="txt">Jeu de rôle</span></div>
+          <div class="cue" data-at="720"><span class="at">12:00</span><span class="txt">Réflexion personnelle</span></div>
         </div>
         <div class="hint">Arrêt automatique à 15 min.</div>
         <div class="laps" id="b1swLaps"></div>
@@ -293,10 +299,17 @@
         <div class="time red" id="b2swTime">00:00</div>
         <div class="progress on">
           <div class="track"><div class="bar red" id="b2swBar" style="width:0%"></div></div>
-          <div class="ticks on"><span class="tick last" data-at="900" style="left:100%;transform:translateX(-100%)">15:00</span></div>
+          <div class="ticks on">
+            <span class="tick" data-at="300" style="left:33.33%">5:00</span>
+            <span class="tick last" data-at="900" style="left:100%;transform:translateX(-100%)">15:00</span>
+          </div>
         </div>
         <div class="controls" id="b2swControls"></div>
-        <div class="hint">Rouge avant 5 min, vert ensuite · vibration à 15 min</div>
+        <div class="cues" id="b2cues" style="display:flex">
+          <div class="cue" data-at="300"><span class="at">5:00</span><span class="txt">Exposé</span></div>
+          <div class="cue" data-at="900"><span class="at">15:00</span><span class="txt">Défense du point de vue</span></div>
+        </div>
+        <div class="hint">Exposé (5 min) puis défense · rouge avant 5 min, vert ensuite</div>
         <div class="laps" id="b2swLaps"></div>
       </div>
     </div>
@@ -328,17 +341,52 @@
             <span class="tick" data-at="90" style="left:18.75%">1:30</span>
             <span class="tick" data-at="210" style="left:43.75%">3:30</span>
             <span class="tick" data-at="390" style="left:81.25%">6:30</span>
-            <span class="tick last" data-at="480" style="left:100%;transform:translateX(-100%)">8:00</span>
+            <span class="tick" style="left:100%;transform:translateX(-100%)">8:00</span>
           </div>
         </div>
         <div class="controls" id="a2swControls"></div>
         <div class="cues" id="a2cues" style="display:flex">
-          <div class="cue" data-at="90"><span class="at">1:30</span><span class="txt">Fin présentation</span></div>
-          <div class="cue" data-at="210"><span class="at">3:30</span><span class="txt">Fin monologue</span></div>
-          <div class="cue" data-at="390"><span class="at">6:30</span><span class="txt">Fin dialogue</span></div>
-          <div class="cue last" data-at="480"><span class="at">8:00</span><span class="txt">Fin épreuve</span></div>
+          <div class="cue" data-at="90"><span class="at">1:30</span><span class="txt">Entretien</span></div>
+          <div class="cue" data-at="210"><span class="at">3:30</span><span class="txt">Monologue</span></div>
+          <div class="cue" data-at="390"><span class="at">6:30</span><span class="txt">Dialogue</span></div>
         </div>
         <div class="laps" id="a2swLaps"></div>
+      </div>
+    </div>
+  </section>
+  <!-- MODULE C1 -->
+  <section id="c1" class="screen">
+    <div class="topbar">
+      <button class="back" onclick="goHome()">‹ Accueil</button>
+      <span class="badge c1">Niveau C1</span>
+    </div>
+
+    <div class="stack">
+      <div class="stage small c1" id="c1cdStage">
+        <div class="phase-label">Préparation · 1 h</div>
+        <div class="time" id="c1cdTime">60:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar c1" id="c1cdBar"></div></div>
+        </div>
+        <div class="controls" id="c1cdControls"></div>
+      </div>
+
+      <div class="stage small c1" id="c1swStage">
+        <div class="phase-label">Passation · 30 min</div>
+        <div class="time c1" id="c1swTime">00:00</div>
+        <div class="progress on">
+          <div class="track"><div class="bar c1" id="c1swBar" style="width:0%"></div></div>
+          <div class="ticks on">
+            <span class="tick" data-at="900" style="left:50%">15:00</span>
+            <span class="tick last" data-at="1800" style="left:100%;transform:translateX(-100%)">30:00</span>
+          </div>
+        </div>
+        <div class="controls" id="c1swControls"></div>
+        <div class="cues" id="c1cues" style="display:flex">
+          <div class="cue" data-at="900"><span class="at">15:00</span><span class="txt">Monologue</span></div>
+          <div class="cue" data-at="1800"><span class="at">30:00</span><span class="txt">Questions</span></div>
+        </div>
+        <div class="laps" id="c1swLaps"></div>
       </div>
     </div>
   </section>
@@ -389,10 +437,10 @@ function makeB1(){
   return { cd, sw };
 }
 function openB1(){ if(!B1)B1=makeB1(); B1.cd.reset(); B1.sw.reset(); show('b1'); }
-function goHome(){ if(B1){ B1.cd.stop(); B1.sw.stop(); } if(B2){ B2.cd.stop(); B2.sw.stop(); } if(A2){ A2.cd.stop(); A2.sw.stop(); } show('home'); }
+function goHome(){ if(B1){ B1.cd.stop(); B1.sw.stop(); } if(B2){ B2.cd.stop(); B2.sw.stop(); } if(A2){ A2.cd.stop(); A2.sw.stop(); } if(C1){ C1.cd.stop(); C1.sw.stop(); } show('home'); }
 
 /* ===== Moteur générique (réutilisable pour B2, et A2/C1 plus tard) ===== */
-let TID=0, B2=null, A2=null;
+let TID=0, B2=null, A2=null, C1=null;
 function mkTimer(cfg){
   const id='t'+(++TID);
   const display=$(cfg.display), bar=$(cfg.bar), controls=$(cfg.controls);
@@ -419,7 +467,7 @@ function mkTimer(cfg){
     cancel(); markActive(id,false);
     base=(mode==='down'?total:0); paused=false; done=false; started=false; fired.clear();
     laps.length=0; renderLaps();
-    stage.querySelectorAll('[data-at]').forEach(t=>t.classList.remove('hit'));
+    stage.querySelectorAll('[data-at]').forEach(t=>t.classList.remove('hit','active'));
     if(mode==='down'){ display.textContent=fmt(total); display.className='time'; bar.className='bar'+(cfg.barColor?' '+cfg.barColor:''); W(100); }
     else { display.textContent=fmt(0); setColor(cfg.colorRule?cfg.colorRule(0):''); W(0); }
     controlsRender('idle');
@@ -450,10 +498,11 @@ function mkTimer(cfg){
         display.textContent=fmt(left); W(left/total*100);
       } else {
         const e=base+(Date.now()-t0)/1000;
-        if(cfg.stopAt && e>=cfg.stopAt){ done=true; cancel(); markActive(id,false); display.textContent=fmt(cfg.stopAt); display.className='time over'; bar.className='bar over'; W(100); stage.querySelectorAll('[data-at]').forEach(x=>x.classList.add('hit')); controlsRender('done'); flashEl(stage); if(cfg.onStop)cfg.onStop(); return; }
+        if(cfg.stopAt && e>=cfg.stopAt){ done=true; cancel(); markActive(id,false); display.textContent=fmt(cfg.stopAt); display.className='time over'; bar.className='bar over'; W(100); paintParts(cfg.stopAt); controlsRender('done'); flashEl(stage); if(cfg.onStop)cfg.onStop(); return; }
         display.textContent=fmt(e); W(e/barRef*100);
         if(cfg.colorRule) setColor(cfg.colorRule(e));
-        (cfg.milestones||[]).forEach(m=>{ if(e>=m.at && !fired.has(m.at)){ fired.add(m.at); m.fn(); flashEl(stage); stage.querySelectorAll('[data-at="'+m.at+'"]').forEach(x=>x.classList.add('hit')); } });
+        paintParts(e);
+        (cfg.milestones||[]).forEach(m=>{ if(e>=m.at && !fired.has(m.at)){ fired.add(m.at); m.fn(); flashEl(stage); } });
       }
       raf=requestAnimationFrame(step);
     };
@@ -461,6 +510,17 @@ function mkTimer(cfg){
   }
 
   function stop(){ cancel(); markActive(id,false); }
+
+  function paintParts(e){
+    const nodes=stage.querySelectorAll('[data-at]');
+    let activeAt=null;
+    nodes.forEach(x=>{ const at=+x.dataset.at; if(at>e && (activeAt===null||at<activeAt)) activeAt=at; });
+    nodes.forEach(x=>{ const at=+x.dataset.at;
+      if(at<=e){ x.classList.add('hit'); x.classList.remove('active'); }
+      else if(at===activeAt){ x.classList.add('active'); x.classList.remove('hit'); }
+      else { x.classList.remove('hit','active'); }
+    });
+  }
 
   function lap(){
     if(!cfg.lapContainer) return;
@@ -482,7 +542,8 @@ function mkTimer(cfg){
       if(mode==='up'){
         if(cfg.colorRule) setColor(cfg.colorRule(v));
         fired.clear();
-        stage.querySelectorAll('[data-at]').forEach(x=>{ const at=+x.dataset.at; if(v>=at){ x.classList.add('hit'); fired.add(at); } else x.classList.remove('hit'); });
+        (cfg.milestones||[]).forEach(m=>{ if(v>=m.at) fired.add(m.at); });
+        paintParts(v);
       }
     }
     track.addEventListener('pointerdown',e=>{ drag=true; resume = started && !paused && !done;
@@ -510,11 +571,11 @@ function makeB2(){
     onEnd(){ buzz([400,150,400,150,600]); }
   });
   const sw=mkTimer({
-    mode:'up', barRef:15*60,
+    mode:'up', barRef:15*60, stopAt:15*60,
     display:'b2swTime', bar:'b2swBar', controls:'b2swControls', lapContainer:'b2swLaps',
     startLabel:'Démarrer monologue et conversation',
     colorRule(e){ return e<300 ? 'red' : 'green'; },
-    milestones:[{ at:900, fn(){ buzz([500,200,500,200,800]); } }]
+    onStop(){ buzz([500,200,500,200,800]); }
   });
   return { cd, sw };
 }
@@ -543,6 +604,26 @@ function makeA2(){
   return { cd, sw };
 }
 function openA2(){ if(!A2)A2=makeA2(); A2.cd.reset(); A2.sw.reset(); show('a2'); }
+
+/* ===== Module C1 ===== */
+function makeC1(){
+  const cd=mkTimer({
+    mode:'down', total:60*60,
+    display:'c1cdTime', bar:'c1cdBar', controls:'c1cdControls',
+    barColor:'c1', startCls:'c1', startLabel:'Démarrer la préparation',
+    onEnd(){ buzz([400,150,400,150,600]); }
+  });
+  const sw=mkTimer({
+    mode:'up', barRef:30*60, stopAt:30*60,
+    display:'c1swTime', bar:'c1swBar', controls:'c1swControls', lapContainer:'c1swLaps',
+    startCls:'c1', startLabel:'Démarrer monologue et questions',
+    colorRule(e){ return e>=1800 ? 'over' : 'c1'; },
+    milestones:[ { at:900, fn(){ buzz([400,150,400]); } } ],   // fin monologue (15:00)
+    onStop(){ buzz([500,200,500,200,800]); }                    // fin questions (30:00)
+  });
+  return { cd, sw };
+}
+function openC1(){ if(!C1)C1=makeC1(); C1.cd.reset(); C1.sw.reset(); show('c1'); }
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 </script>
