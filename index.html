@@ -29,7 +29,7 @@
     --stop:#e85d75;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html{height:100%}
+  html{height:100%;overscroll-behavior:none}
   body{
     font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
     background:radial-gradient(1200px 700px at 50% -10%,#1a2230 0%,var(--bg) 60%);
@@ -38,6 +38,7 @@
     display:flex;align-items:center;justify-content:center;
     padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));
     overflow-x:hidden;
+    overscroll-behavior:none;
   }
   .app{width:100%;max-width:520px}
   .screen{display:none;animation:fade .35s ease}
