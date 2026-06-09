@@ -424,14 +424,15 @@ function markActive(id,on){ if(on)activeTimers.add(id); else activeTimers.delete
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && activeTimers.size>0) syncWake(); });
 
 /* ===== Notifications vers montre connectée (Amazfit/Zepp, etc.) ===== */
-let watchNotif=false;
+let watchNotif=false, notifSeq=0;
 try{ watchNotif=localStorage.getItem('watchNotif')==='1'; }catch(e){}
 function notify(text){
   if(!watchNotif || !('Notification' in window) || Notification.permission!=='granted' || !('serviceWorker' in navigator)) return;
   try{
+    const tag='mlt-'+(++notifSeq);
     navigator.serviceWorker.ready.then(reg=>{
-      reg.showNotification('Mesure le temps', { body:text, tag:'mlt', renotify:true, silent:false, vibrate:[300,120,300] });
-      setTimeout(()=>reg.getNotifications({tag:'mlt'}).then(ns=>ns.forEach(n=>n.close())).catch(()=>{}), 5000);
+      reg.showNotification('Mesure le temps', { body:text, tag, silent:false, vibrate:[300,120,300] });
+      setTimeout(()=>reg.getNotifications({tag}).then(ns=>ns.forEach(n=>n.close())).catch(()=>{}), 8000);
     }).catch(()=>{});
   }catch(e){}
 }
