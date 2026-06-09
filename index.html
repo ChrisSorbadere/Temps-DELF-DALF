@@ -118,9 +118,6 @@
   .splash-cta{margin-top:36px}
   .splash-cta .btn{min-width:180px}
   .credit{position:fixed;left:0;right:0;bottom:max(16px,env(safe-area-inset-bottom));text-align:center;color:var(--muted);font-size:.74rem;letter-spacing:.12em}
-  .watch{margin-top:24px;text-align:center}
-  .watch .btn{min-width:260px}
-  .watch-note{margin-top:10px;color:var(--muted);font-size:.72rem;line-height:1.4}
 
   .progress{margin-top:24px;display:none}
   .progress.on{display:block}
@@ -212,7 +209,7 @@
     </svg>
     <div class="splash-title">Mesure le temps</div>
     <div class="splash-sub">DELF / DALF</div>
-    <div class="splash-cta"><button class="btn primary" onclick="show('home')">Commencer</button></div>
+    <div class="splash-cta"><button class="btn primary" onclick="enterApp()">Commencer</button></div>
     <div class="credit">Christophe Soulas — 2026</div>
   </section>
 
@@ -240,10 +237,6 @@
         <span class="code">C1</span>
         <span class="desc">Prépa 1 h + monologue 15 min + questions 15 min</span>
       </button>
-    </div>
-    <div class="watch">
-      <button class="btn ghost" id="watchBtn" onclick="toggleWatch()">Montre connectée : désactivée</button>
-      <div class="watch-note">Fait vibrer une montre connectée (Amazfit/Zepp…) via les notifications.</div>
     </div>
   </section>
 
@@ -408,6 +401,9 @@
 const $ = id => document.getElementById(id);
 function show(scr){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(scr).classList.add('active'); }
 function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
+const VPULSE=[700,250,700];             // jalon : fin d'une partie
+const VEND=[900,300,900,300,1100];      // fin d'épreuve / arrêt
+const VPREP=[800,300,800,300,800];      // fin de préparation
 function flashEl(el){ if(!el)return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 function fmt(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
 
@@ -424,14 +420,13 @@ function markActive(id,on){ if(on)activeTimers.add(id); else activeTimers.delete
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && activeTimers.size>0) syncWake(); });
 
 /* ===== Notifications vers montre connectée (Amazfit/Zepp, etc.) ===== */
-let watchNotif=false, notifSeq=0;
-try{ watchNotif=localStorage.getItem('watchNotif')==='1'; }catch(e){}
+const watchNotif=true; let notifSeq=0;
 function notify(text){
   if(!watchNotif || !('Notification' in window) || Notification.permission!=='granted' || !('serviceWorker' in navigator)) return;
   try{
     const tag='mlt-'+(++notifSeq);
     navigator.serviceWorker.ready.then(reg=>{
-      reg.showNotification('Mesure le temps', { body:text, tag, silent:false, vibrate:[300,120,300] });
+      reg.showNotification('Mesure le temps', { body:text, tag, silent:false });
       setTimeout(()=>reg.getNotifications({tag}).then(ns=>ns.forEach(n=>n.close())).catch(()=>{}), 8000);
     }).catch(()=>{});
   }catch(e){}
@@ -440,18 +435,9 @@ function notifyPart(stage, at){
   const c=stage.querySelector('[data-at="'+at+'"] .txt');
   notify(c ? 'Fin : '+c.textContent : 'Fin de l\'épreuve');
 }
-function updateWatchBtn(){
-  const b=$('watchBtn'); if(!b) return;
-  b.textContent='Montre connectée : '+(watchNotif?'activée':'désactivée');
-  b.classList.toggle('primary',watchNotif); b.classList.toggle('ghost',!watchNotif);
-}
-function toggleWatch(){
-  if(watchNotif){ watchNotif=false; try{localStorage.setItem('watchNotif','0');}catch(e){} updateWatchBtn(); return; }
-  if(!('Notification' in window)){ updateWatchBtn(); return; }
-  Notification.requestPermission().then(p=>{
-    if(p==='granted'){ watchNotif=true; try{localStorage.setItem('watchNotif','1');}catch(e){} updateWatchBtn(); notify('Notifications activées'); }
-    else updateWatchBtn();
-  }).catch(()=>{});
+function enterApp(){
+  try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission().catch(()=>{}); }catch(e){}
+  show('home');
 }
 
 /* ===== Module B1 ===== */
@@ -461,7 +447,7 @@ function makeB1(){
     mode:'down', total:10*60,
     display:'b1cdTime', bar:'b1cdBar', controls:'b1cdControls',
     startLabel:'Démarrer la préparation',
-    onEnd(){ buzz([400,150,400,150,600]); }
+    onEnd(){ buzz(VPREP); }
   });
   const sw=mkTimer({
     mode:'up', barRef:12*60, stopAt:15*60,
@@ -469,11 +455,11 @@ function makeB1(){
     startLabel:'Démarrer le chronomètre',
     colorRule(e){ return e>=720 ? 'over' : 'run'; },
     milestones:[
-      { at:120, fn(){ buzz([300,120,300]); } },        // fin présentation (2:00)
-      { at:300, fn(){ buzz([300,120,300]); } },        // fin jeu de rôle (5:00)
-      { at:720, fn(){ buzz([500,200,500,200,800]); } } // fin examen (12:00)
+      { at:120, fn(){ buzz(VPULSE); } },        // fin présentation (2:00)
+      { at:300, fn(){ buzz(VPULSE); } },        // fin jeu de rôle (5:00)
+      { at:720, fn(){ buzz(VEND); } } // fin examen (12:00)
     ],
-    onStop(){ buzz([300,120,300]); }                   // arrêt automatique (15:00)
+    onStop(){ buzz(VPULSE); }                   // arrêt automatique (15:00)
   });
   return { cd, sw };
 }
@@ -609,14 +595,14 @@ function makeB2(){
     mode:'down', total:30*60,
     display:'b2cdTime', bar:'b2cdBar', controls:'b2cdControls',
     barColor:'b2', startCls:'accent', startLabel:'Démarrer la préparation',
-    onEnd(){ buzz([400,150,400,150,600]); }
+    onEnd(){ buzz(VPREP); }
   });
   const sw=mkTimer({
     mode:'up', barRef:15*60, stopAt:15*60,
     display:'b2swTime', bar:'b2swBar', controls:'b2swControls', lapContainer:'b2swLaps',
     startLabel:'Démarrer monologue et conversation',
     colorRule(e){ return e<300 ? 'red' : 'green'; },
-    onStop(){ buzz([500,200,500,200,800]); }
+    onStop(){ buzz(VEND); }
   });
   return { cd, sw };
 }
@@ -628,7 +614,7 @@ function makeA2(){
     mode:'down', total:10*60,
     display:'a2cdTime', bar:'a2cdBar', controls:'a2cdControls',
     barColor:'a2', startCls:'a2', startLabel:'Démarrer la préparation',
-    onEnd(){ buzz([400,150,400,150,600]); }
+    onEnd(){ buzz(VPREP); }
   });
   const sw=mkTimer({
     mode:'up', barRef:8*60, stopAt:8*60,
@@ -636,11 +622,11 @@ function makeA2(){
     startCls:'a2', startLabel:'Démarrer le chronomètre',
     colorRule(e){ return e>=480 ? 'over' : 'a2'; },
     milestones:[
-      { at:90,  fn(){ buzz([300,120,300]); } },   // fin présentation (1:30)
-      { at:210, fn(){ buzz([300,120,300]); } },   // fin monologue (3:30)
-      { at:390, fn(){ buzz([400,150,400]); } }    // fin dialogue (6:30)
+      { at:90,  fn(){ buzz(VPULSE); } },   // fin présentation (1:30)
+      { at:210, fn(){ buzz(VPULSE); } },   // fin monologue (3:30)
+      { at:390, fn(){ buzz(VPULSE); } }    // fin dialogue (6:30)
     ],
-    onStop(){ buzz([500,200,500,200,800]); }      // fin épreuve (8:00)
+    onStop(){ buzz(VEND); }      // fin épreuve (8:00)
   });
   return { cd, sw };
 }
@@ -652,22 +638,21 @@ function makeC1(){
     mode:'down', total:60*60,
     display:'c1cdTime', bar:'c1cdBar', controls:'c1cdControls',
     barColor:'c1', startCls:'c1', startLabel:'Démarrer la préparation',
-    onEnd(){ buzz([400,150,400,150,600]); }
+    onEnd(){ buzz(VPREP); }
   });
   const sw=mkTimer({
     mode:'up', barRef:30*60, stopAt:30*60,
     display:'c1swTime', bar:'c1swBar', controls:'c1swControls', lapContainer:'c1swLaps',
     startCls:'c1', startLabel:'Démarrer monologue et questions',
     colorRule(e){ return e>=1800 ? 'over' : 'c1'; },
-    milestones:[ { at:900, fn(){ buzz([400,150,400]); } } ],   // fin monologue (15:00)
-    onStop(){ buzz([500,200,500,200,800]); }                    // fin questions (30:00)
+    milestones:[ { at:900, fn(){ buzz(VPULSE); } } ],   // fin monologue (15:00)
+    onStop(){ buzz(VEND); }                    // fin questions (30:00)
   });
   return { cd, sw };
 }
 function openC1(){ if(!C1)C1=makeC1(); C1.cd.reset(); C1.sw.reset(); show('c1'); }
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
-updateWatchBtn();
 </script>
 </body>
 </html>
