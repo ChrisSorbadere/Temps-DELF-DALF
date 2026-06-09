@@ -118,6 +118,9 @@
   .splash-cta{margin-top:36px}
   .splash-cta .btn{min-width:180px}
   .credit{position:fixed;left:0;right:0;bottom:max(16px,env(safe-area-inset-bottom));text-align:center;color:var(--muted);font-size:.74rem;letter-spacing:.12em}
+  .watch{margin-top:24px;text-align:center}
+  .watch .btn{min-width:260px}
+  .watch-note{margin-top:10px;color:var(--muted);font-size:.72rem;line-height:1.4}
 
   .progress{margin-top:24px;display:none}
   .progress.on{display:block}
@@ -237,6 +240,10 @@
         <span class="code">C1</span>
         <span class="desc">Prépa 1 h + monologue 15 min + questions 15 min</span>
       </button>
+    </div>
+    <div class="watch">
+      <button class="btn ghost" id="watchBtn" onclick="toggleWatch()">Montre connectée : désactivée</button>
+      <div class="watch-note">Fait vibrer une montre connectée (Amazfit/Zepp…) via les notifications.</div>
     </div>
   </section>
 
@@ -416,6 +423,36 @@ async function syncWake(){
 function markActive(id,on){ if(on)activeTimers.add(id); else activeTimers.delete(id); syncWake(); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && activeTimers.size>0) syncWake(); });
 
+/* ===== Notifications vers montre connectée (Amazfit/Zepp, etc.) ===== */
+let watchNotif=false;
+try{ watchNotif=localStorage.getItem('watchNotif')==='1'; }catch(e){}
+function notify(text){
+  if(!watchNotif || !('Notification' in window) || Notification.permission!=='granted' || !('serviceWorker' in navigator)) return;
+  try{
+    navigator.serviceWorker.ready.then(reg=>{
+      reg.showNotification('Mesure le temps', { body:text, tag:'mlt', renotify:true, silent:false, vibrate:[300,120,300] });
+      setTimeout(()=>reg.getNotifications({tag:'mlt'}).then(ns=>ns.forEach(n=>n.close())).catch(()=>{}), 5000);
+    }).catch(()=>{});
+  }catch(e){}
+}
+function notifyPart(stage, at){
+  const c=stage.querySelector('[data-at="'+at+'"] .txt');
+  notify(c ? 'Fin : '+c.textContent : 'Fin de l\'épreuve');
+}
+function updateWatchBtn(){
+  const b=$('watchBtn'); if(!b) return;
+  b.textContent='Montre connectée : '+(watchNotif?'activée':'désactivée');
+  b.classList.toggle('primary',watchNotif); b.classList.toggle('ghost',!watchNotif);
+}
+function toggleWatch(){
+  if(watchNotif){ watchNotif=false; try{localStorage.setItem('watchNotif','0');}catch(e){} updateWatchBtn(); return; }
+  if(!('Notification' in window)){ updateWatchBtn(); return; }
+  Notification.requestPermission().then(p=>{
+    if(p==='granted'){ watchNotif=true; try{localStorage.setItem('watchNotif','1');}catch(e){} updateWatchBtn(); notify('Notifications activées'); }
+    else updateWatchBtn();
+  }).catch(()=>{});
+}
+
 /* ===== Module B1 ===== */
 let B1=null;
 function makeB1(){
@@ -497,15 +534,15 @@ function mkTimer(cfg){
     const step=()=>{
       if(mode==='down'){
         const left=base-(Date.now()-t0)/1000;
-        if(left<=0){ done=true; cancel(); markActive(id,false); display.textContent=fmt(0); W(0); controlsRender('done'); flashEl(stage); if(cfg.onEnd)cfg.onEnd(); return; }
+        if(left<=0){ done=true; cancel(); markActive(id,false); display.textContent=fmt(0); W(0); controlsRender('done'); flashEl(stage); if(cfg.onEnd)cfg.onEnd(); notify('Préparation terminée'); return; }
         display.textContent=fmt(left); W(left/total*100);
       } else {
         const e=base+(Date.now()-t0)/1000;
-        if(cfg.stopAt && e>=cfg.stopAt){ done=true; cancel(); markActive(id,false); display.textContent=fmt(cfg.stopAt); display.className='time over'; bar.className='bar over'; W(100); paintParts(cfg.stopAt); controlsRender('done'); flashEl(stage); if(cfg.onStop)cfg.onStop(); return; }
+        if(cfg.stopAt && e>=cfg.stopAt){ done=true; cancel(); markActive(id,false); display.textContent=fmt(cfg.stopAt); display.className='time over'; bar.className='bar over'; W(100); paintParts(cfg.stopAt); controlsRender('done'); flashEl(stage); if(cfg.onStop)cfg.onStop(); notifyPart(stage,cfg.stopAt); return; }
         display.textContent=fmt(e); W(e/barRef*100);
         if(cfg.colorRule) setColor(cfg.colorRule(e));
         paintParts(e);
-        (cfg.milestones||[]).forEach(m=>{ if(e>=m.at && !fired.has(m.at)){ fired.add(m.at); m.fn(); flashEl(stage); } });
+        (cfg.milestones||[]).forEach(m=>{ if(e>=m.at && !fired.has(m.at)){ fired.add(m.at); m.fn(); flashEl(stage); notifyPart(stage,m.at); } });
       }
       raf=requestAnimationFrame(step);
     };
@@ -629,6 +666,7 @@ function makeC1(){
 function openC1(){ if(!C1)C1=makeC1(); C1.cd.reset(); C1.sw.reset(); show('c1'); }
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+updateWatchBtn();
 </script>
 </body>
 </html>

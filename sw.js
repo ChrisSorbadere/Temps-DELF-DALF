@@ -1,4 +1,4 @@
-const CACHE = 'mesure-le-temps-v2';
+const CACHE = 'mesure-le-temps-v3';
 const ASSETS = [
   './', 'index.html', 'manifest.json',
   'icon.svg', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'favicon-32.png'
@@ -45,4 +45,12 @@ self.addEventListener('fetch', e => {
       }))
     );
   }
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window'}).then(list => {
+    for (const c of list) { if ('focus' in c) return c.focus(); }
+    if (clients.openWindow) return clients.openWindow('.');
+  }));
 });
