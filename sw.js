@@ -1,4 +1,4 @@
-const CACHE = 'mesure-le-temps-v3';
+const CACHE = 'mesure-le-temps-v4';
 const ASSETS = [
   './', 'index.html', 'manifest.json',
   'icon.svg', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'favicon-32.png'
