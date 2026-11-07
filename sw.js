@@ -1,7 +1,7 @@
-const CACHE = 'mesure-le-temps-v6';
+const CACHE = 'mesure-le-temps-v7';
 const ASSETS = [
   './', 'index.html', 'manifest.json',
-  'icon.svg', 'icon-192.png', 'icon-512.png', 'maskable-512.png', 'favicon-32.png'
+  'icon-192.png', 'icon-512.png', 'maskable-192.png', 'maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png'
 ];
 
 self.addEventListener('install', e => {
