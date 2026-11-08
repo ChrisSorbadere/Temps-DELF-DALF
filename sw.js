@@ -1,4 +1,4 @@
-const CACHE = 'mesure-le-temps-v8';
+const CACHE = 'mesure-le-temps-v9';
 const ASSETS = [
   './', 'index.html', 'manifest.json',
   'icon-192.png', 'icon-512.png', 'maskable-192.png', 'maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png'

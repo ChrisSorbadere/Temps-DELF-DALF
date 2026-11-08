@@ -449,7 +449,7 @@ function bindScrub(el,onP){
   const up=()=>{ drag=false; }; el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
 }
 function scrubPrep(k,f){
-  const p=S[k].prep, left=f*LV[k].prep;
+  const p=S[k].prep, left=(1-f)*LV[k].prep;
   if(left<=0.5){ p.base=0; if(p.st!=='done'){ p.st='done'; alertAll(VPREP,k+' · Préparation terminée'); } }
   else { p.base=left; if(p.st==='run') p.t0=now(); else p.st='pause'; p.warned=left<=60; }
   syncWake(); paint();
@@ -508,10 +508,10 @@ function paint(){
 
   /* préparation */
   const left=Math.max(0,prepLeft(p)), pc=$('prepCard');
-  $('prepDigits').textContent=fmtUp(left);
+  $('prepDigits').textContent=fmt(L.prep-left);
   pc.classList.toggle('warn', p.st!=='done' && p.st!=='idle' && left<=60);
   pc.classList.toggle('done', p.st==='done');
-  $('prepBar').firstChild.style.width=(left/L.prep*100)+'%';
+  $('prepBar').firstChild.style.width=((L.prep-left)/L.prep*100)+'%';
   $('prepBtn').textContent= p.st==='run'?'Pause': p.st==='pause'?'Reprendre': p.st==='done'?'Terminée':'Démarrer';
   $('prepBtn').disabled= p.st==='done';
   $('prepBtn').className='btn'+(p.st==='run'?' ghost':'');
@@ -523,16 +523,16 @@ function paint(){
   $('candLbl').textContent='Candidat '+q.cand;
   if(q.st==='idle'){
     $('partIdx').textContent='1/'+n; $('partName').textContent=P[0][0];
-    $('passDigits').textContent=fmtUp(P[0][1]); $('digitsCap').textContent='Prêt';
+    $('passDigits').textContent=fmt(0); $('digitsCap').textContent='Prêt · objectif '+dur(P[0][1]);
   } else if(q.st==='done'){
     $('partIdx').textContent=''; $('partName').textContent='Épreuve terminée';
     $('passDigits').textContent=fmt(e); $('digitsCap').textContent='Durée totale';
   } else if(over){
     $('partIdx').textContent=n+'/'+n; $('partName').textContent=P[n-1][0];
-    $('passDigits').textContent='+'+fmt(e-lastEnd); $('digitsCap').textContent='Dépassement · arrêt auto à '+fmt(L.cap);
+    $('passDigits').textContent=fmt(e-q.starts[n-1]); $('digitsCap').textContent='Temps dépassé de '+fmt(e-lastEnd)+' · arrêt auto à '+fmt(L.cap);
   } else {
     $('partIdx').textContent=(i+1)+'/'+n; $('partName').textContent=P[i][0];
-    $('passDigits').textContent=fmtUp(rem); $('digitsCap').textContent='Reste dans la partie'+(q.st==='pause'?' · en pause':'');
+    $('passDigits').textContent=fmt(e-q.starts[i]); $('digitsCap').textContent='Temps de la partie · objectif '+dur(partEnd(k,q,i)-q.starts[i])+(q.st==='pause'?' · en pause':'');
   }
   const running=q.st==='run'||q.st==='pause';
   pcard.classList.toggle('warn', running && !over && rem<=30);
