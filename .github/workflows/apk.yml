@@ -61,7 +61,14 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          if ! ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log; then
+          ok=0
+          for essai in 1 2 3; do
+            if ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log; then ok=1; break; fi
+            if grep -q "Could not download\|Could not resolve\|Read timed out\|Connection reset" build.log; then
+              echo "::warning::Téléchargement Gradle raté (essai $essai), nouvel essai dans 20 s"; sleep 20
+            else break; fi
+          done
+          if [ $ok -ne 1 ]; then
             grep -E -A3 "error:|What went wrong|Exception|e: " build.log | grep -v "^> Task" | head -60 | while IFS= read -r l; do echo "::error::$l"; done
             exit 1
           fi
