@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.chrissorbadere.tempsdelfdalf",
+  "appName": "Mesure le temps",
+  "webDir": "app-shell",
+  "server": {
+    "url": "https://chrissorbadere.github.io/temps-delf-dalf/",
+    "errorPath": "offline.html",
+    "androidScheme": "https"
+  },
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_chrono", "iconColor": "#1565c0" }
+  }
+}

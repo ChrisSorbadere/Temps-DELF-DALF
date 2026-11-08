@@ -45,3 +45,12 @@ Après modification d'`index.html` ou des assets, incrémenter la version du cac
 
 - Vibrations et maintien de l'écran allumé : fonctionnent sur mobile (Android) ; ignorés silencieusement ailleurs.
 - Niveaux disponibles : A2, B1, B2. C1 reste à configurer.
+
+## Appli Android (APK)
+
+L'APK (Capacitor) charge la version en ligne de l'appli : les mises à jour du site arrivent sans réinstaller.
+Il ajoute le vibreur natif, les notifications vers la montre et l'écran toujours allumé.
+
+- Construction automatique par GitHub Actions (`.github/workflows/apk.yml`) à chaque modification de `android/`, `app-shell/`, `package*.json` ou `capacitor.config.json`.
+- Signature : secrets `ANDROID_KEYSTORE_BASE64` et `ANDROID_KEYSTORE_PASSWORD` (Settings › Secrets and variables › Actions). Ne jamais changer la clé, sinon l'APK ne s'installe plus par-dessus.
+- Installation : page **Releases** › dernier `.apk` › ouvrir sur le téléphone › autoriser l'installation.

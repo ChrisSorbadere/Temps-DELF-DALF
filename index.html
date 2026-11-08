@@ -305,11 +305,33 @@ function closeSheet(){ $('sheetBg').classList.remove('on'); $('sheet').classList
 
 /* ================= Vibrations & notifications ================= */
 const VPULSE=[700,250,700], VEND=[900,300,900,300,1100], VPREP=[800,300,800,300,800], VWARN=[250,150,250];
-function buzz(p){ if(!SET.vib) return; try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
+/* Appli Android (APK Capacitor) : vibreur et notifications natifs */
+const CAP=(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? window.Capacitor.Plugins : null;
+let capChan=null;
+function capChannel(){
+  if(!capChan) capChan=CAP.LocalNotifications.createChannel({id:'chrono',name:'Changements de partie',description:'Alerte à chaque changement de partie (relayée vers la montre)',importance:4,vibration:false,sound:null,visibility:1}).catch(()=>{});
+  return capChan;
+}
+function buzz(p){
+  if(!SET.vib) return;
+  if(CAP && CAP.Haptics){ let t=0; p.forEach((d,i)=>{ if(i%2===0){ setTimeout(()=>CAP.Haptics.vibrate({duration:d}).catch(()=>{}),t); } t+=d; }); return; }
+  try{ navigator.vibrate && navigator.vibrate(p); }catch(e){}
+}
 let nseq=0;
-function askNotif(){ try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission().catch(()=>{}); }catch(e){} }
+function askNotif(){
+  if(CAP && CAP.LocalNotifications){ CAP.LocalNotifications.checkPermissions().then(r=>{ if(r.display!=='granted') CAP.LocalNotifications.requestPermissions().catch(()=>{}); }).catch(()=>{}); return; }
+  try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission().catch(()=>{}); }catch(e){}
+}
 function notify(text){
-  if(!SET.watch || !('Notification' in window) || Notification.permission!=='granted' || !('serviceWorker' in navigator)) return;
+  if(!SET.watch) return;
+  if(CAP && CAP.LocalNotifications){
+    const n={id:1000+(++nseq%1000),title:'Mesure le temps',body:text,channelId:'chrono',smallIcon:'ic_stat_chrono',autoCancel:true};
+    capChannel().then(()=>CAP.LocalNotifications.schedule({notifications:[n]})).then(()=>{
+      setTimeout(()=>CAP.LocalNotifications.removeDeliveredNotifications({notifications:[n]}).catch(()=>{}),8000);
+    }).catch(()=>{});
+    return;
+  }
+  if(!('Notification' in window) || Notification.permission!=='granted' || !('serviceWorker' in navigator)) return;
   const tag='mlt-'+(++nseq);
   navigator.serviceWorker.ready.then(reg=>{
     reg.showNotification('Mesure le temps',{body:text,tag,silent:false});
