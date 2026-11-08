@@ -1,8 +1,8 @@
 {
   "name": "temps-delf-dalf",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
-  "description": "Mesure le temps — appli Android (Capacitor) qui charge chrissorbadere.github.io/temps-delf-dalf",
+  "description": "Mesure le temps — appli Android (Capacitor) qui charge chrissorbadere.github.io/Temps-DELF-DALF",
   "dependencies": {
     "@capacitor/android": "8.6.0",
     "@capacitor/cli": "8.6.0",

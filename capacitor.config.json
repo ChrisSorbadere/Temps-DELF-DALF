@@ -3,7 +3,7 @@
   "appName": "Mesure le temps",
   "webDir": "app-shell",
   "server": {
-    "url": "https://chrissorbadere.github.io/temps-delf-dalf/",
+    "url": "https://chrissorbadere.github.io/Temps-DELF-DALF/",
     "errorPath": "offline.html",
     "androidScheme": "https"
   },
