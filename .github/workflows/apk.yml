@@ -54,6 +54,21 @@ jobs:
           fi
           echo "$KS" | base64 -d > android/app/release.jks
 
+      - name: Distribution Gradle (plusieurs sources, nouveaux essais)
+        run: |
+          Z="$RUNNER_TEMP/gradle-8.14.3-bin.zip"
+          for u in https://services.gradle.org/distributions/gradle-8.14.3-bin.zip \
+                   https://downloads.gradle.org/distributions/gradle-8.14.3-bin.zip \
+                   https://github.com/gradle/gradle-distributions/releases/download/v8.14.3/gradle-8.14.3-bin.zip; do
+            for i in 1 2 3; do
+              if curl -fsSL --retry 3 --retry-delay 10 -o "$Z" "$u"; then echo "Gradle téléchargé depuis $u"; break 2; fi
+              echo "::warning::Échec $u (essai $i)"; sleep 20
+            done
+          done
+          test -s "$Z" || { echo "::error::Impossible de télécharger Gradle (serveurs GitHub/Gradle indisponibles) : relancer plus tard"; exit 1; }
+          sed -i "s#^distributionUrl=.*#distributionUrl=file\\://$Z#" android/gradle/wrapper/gradle-wrapper.properties
+          grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Compiler l'APK signé
         working-directory: android
         env:
